@@ -1,65 +1,28 @@
-name: Build Android APK
-
-on:
-  push:
-    branches: [ "**" ]
-  pull_request:
-    branches: [ "**" ]
-  workflow_dispatch:
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Prepare and verify project structure
-        run: |
-          echo "=== Kiem tra cau truc thu muc ban dau ==="
-          ls -la
-
-          # Luon uu tien giai nen de (overwrite) neu nguoi dung upload file .zip len GitHub
-          ZIP_FILE=$(find . -maxdepth 2 -name "*.zip" | head -n 1)
-          if [ -n "$ZIP_FILE" ]; then
-            echo "Phat hien file nen $ZIP_FILE, dang giai nen de len ma nguon cu..."
-            unzip -o -q "$ZIP_FILE"
-          fi
-
-          # Neu ma nguon nam trong thu muc con thi dua ra thu muc goc
-          if [ ! -f "app/build.gradle.kts" ]; then
-            FOUND_APP=$(find . -maxdepth 4 -path "*/app/build.gradle.kts" | head -n 1)
-            if [ -n "$FOUND_APP" ]; then
-              PROJECT_ROOT=$(dirname $(dirname "$FOUND_APP"))
-              echo "Phat hien ma nguon nam trong thu muc con: $PROJECT_ROOT. Dang dua ra thu muc goc..."
-              cp -rf "$PROJECT_ROOT"/. .
-            fi
-          fi
-
-          echo "=== Kiem tra ma nguon sau khi chuan hoa ==="
-          if [ ! -f "app/build.gradle.kts" ]; then
-            echo "::error::Khong tim thay 'app/build.gradle.kts' tren GitHub! Vui long upload file CleanTV-Custom.zip len GitHub!"
-            exit 1
-          fi
-
-          if ! grep -q "batDauXoaCoSaoLuu" app/src/main/java/zone/vgs/tvsach/ui/PhienLamViec.kt; then
-            echo "::error::Code tren GitHub van dang la ban goc cu, chua phai ban CleanTV-Custom moi! Vui long keo file CleanTV-Custom.zip moi nhat len GitHub!"
-            exit 1
-          fi
-          echo "Da xac nhan ma nguon CleanTV Custom (Sao luu APK & Go bo) day du!"
-
+                  with open(os.path.join(orig_root, rel_path), "r", encoding="utf-8") as of:
+                      o_lines = of.read().replace("\r\n", "\n").split("\n")
+                  parts = []
+                  for op in entry["ops"]:
+                      if isinstance(op, str):
+                          parts.append(op)
+                      else:
+                          s, c = int(op[0]), int(op[1])
+                          parts.append("\n".join(o_lines[s:s+c]))
+                  out_text = "\n".join(parts)
+              with open(rel_path, "w", encoding="utf-8", newline="\n") as mf:
+                  mf.write(out_text)
+              print(f"Applied custom file: {rel_path} ({len(out_text)} chars)")
+          EOF_PY
+          grep -q "batDauXoaCoSaoLuu" app/src/main/java/zone/vgs/tvsach/ui/PhienLamViec.kt
+          echo "=== Da tich hop 100% ma nguon Sao luu APK & Go bo thanh cong! ==="
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-
       - name: Setup Gradle 8.9
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-
       - name: Accept Android SDK Licenses
         run: |
           if [ -n "$ANDROID_HOME" ] && [ -f "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
@@ -67,11 +30,9 @@ jobs:
           elif [ -n "$ANDROID_SDK_ROOT" ] && [ -f "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" ]; then
             yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
           fi
-
       - name: Build Debug APK with Gradle
         run: |
           gradle :app:assembleDebug --no-daemon --stacktrace
-
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
